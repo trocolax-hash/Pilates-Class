@@ -15,7 +15,8 @@ import {
   BookOpen,
   RotateCcw,
   Check,
-  Plus
+  Plus,
+  Printer
 } from "lucide-react";
 
 interface SetupModeProps {
@@ -218,6 +219,16 @@ export default function SetupMode({
           </div>
 
           <div className="flex items-stretch gap-2">
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-3.5 rounded-xl bg-[#1C1C1C] hover:bg-[#2C2C2C] text-[#E0DCD4] hover:text-white border border-[#2A2A2A] hover:border-[#A8B9A7]/40 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all duration-200"
+              title="Imprimir el Plan de la Clase / Guardar como PDF"
+              id="btn-print-class"
+            >
+              <Printer className="w-4 h-4 text-[#A8B9A7]" />
+              <span>Imprimir Plan</span>
+            </button>
+
             <button
               onClick={handleSaveClass}
               className={`px-5 py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
@@ -520,14 +531,26 @@ export default function SetupMode({
         </div>
 
         {isClassValid() ? (
-          <button
-            onClick={() => onStartClass(className, selectedExercises)}
-            className="w-full sm:w-80 h-20 rounded-3xl bg-[#A8B9A7] hover:bg-[#869885] hover:scale-[1.01] text-[#0F0F0F] font-display font-bold text-xl uppercase tracking-widest flex items-center justify-center gap-4 shadow-xl select-none hover:shadow-2xl transition-all duration-300 cursor-pointer active:scale-95"
-            id="btn-start-class-giant"
-          >
-            <Play className="w-6 h-6 fill-current text-[#0F0F0F]" />
-            <span>Iniciar Clase</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+            <button
+              onClick={() => onStartClass(className, selectedExercises)}
+              className="w-full sm:w-80 h-20 rounded-3xl bg-[#A8B9A7] hover:bg-[#869885] hover:scale-[1.01] text-[#0F0F0F] font-display font-bold text-xl uppercase tracking-widest flex items-center justify-center gap-4 shadow-xl select-none hover:shadow-2xl transition-all duration-300 cursor-pointer active:scale-95 animate-fade-in"
+              id="btn-start-class-giant"
+            >
+              <Play className="w-6 h-6 fill-current text-[#0F0F0F]" />
+              <span>Iniciar Clase</span>
+            </button>
+            
+            <button
+              onClick={() => window.print()}
+              className="w-full sm:w-64 h-20 rounded-3xl bg-[#1C1C1C] hover:bg-[#2C2C2C] border border-[#2A2A2A] hover:border-[#A8B9A7]/55 text-white font-display font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-300 cursor-pointer active:scale-95"
+              title="Obtén una copia impresa o PDF de tu clase"
+              id="btn-print-class-giant"
+            >
+              <Printer className="w-5 h-5 text-[#A8B9A7]" />
+              <span>Imprimir Ficha</span>
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
             <button
@@ -544,6 +567,127 @@ export default function SetupMode({
             </p>
           </div>
         )}
+      </div>
+
+      {/* ----------------- SECCIÓN DE IMPRESIÓN (OCULTA EN PANTALLA, ACTIVA EN PDF/IMPRESORA) ----------------- */}
+      <div id="print-root" className="hidden print:block p-8 bg-white text-black font-sans leading-relaxed">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body * {
+              visibility: hidden !important;
+            }
+            #print-root, #print-root * {
+              visibility: visible !important;
+            }
+            #print-root {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              background: white !important;
+              color: black !important;
+              padding: 40px 20px !important;
+              box-sizing: border-box !important;
+            }
+            .print-header {
+              border-bottom: 2px solid #111 !important;
+              padding-bottom: 12px !important;
+              margin-bottom: 24px !important;
+            }
+            .print-grid {
+              display: grid !important;
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+              gap: 20px !important;
+            }
+            .print-block-card {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              border: 1px solid #ddd !important;
+              border-radius: 8px !important;
+              padding: 16px !important;
+              background: #fafafa !important;
+            }
+          }
+        `}} />
+
+        <div className="print-header flex justify-between items-end">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 font-serif">
+              {className}
+            </h1>
+            <p className="text-xs text-neutral-500 font-medium mt-1">
+              Pilates Class Studio • Planificación Completa de Sesión (60 min)
+            </p>
+          </div>
+          <div className="text-right text-xs text-neutral-400">
+            <p>Fecha de Impresión: {new Date().toLocaleDateString()}</p>
+            <p className="font-semibold text-neutral-600 mt-0.5">Instructor: ____________________</p>
+          </div>
+        </div>
+
+        {/* Exercises Grid for Print */}
+        <div className="print-grid grid grid-cols-2 gap-5 mt-6">
+          {PILATES_BLOCKS.map((block) => {
+            const exercises = selectedExercises[block.id] || [];
+            return (
+              <div key={block.id} className="print-block-card border border-neutral-200 rounded-lg p-5 bg-neutral-50/50">
+                <div className="flex justify-between items-start border-b border-neutral-200 pb-2 mb-3">
+                  <h3 className="font-serif font-bold text-base text-neutral-800">
+                    B{block.id}. {block.name}
+                  </h3>
+                  <span className="text-[11px] font-sans font-bold uppercase tracking-wider bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded">
+                    10 Min
+                  </span>
+                </div>
+                
+                <p className="text-[11px] text-neutral-400 italic mb-3">
+                  Estructura: 9:30 Ejecución + 30s Transición
+                </p>
+
+                {exercises.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic font-medium py-1">
+                    (Ningún ejercicio seleccionado para este bloque)
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {exercises.map((ex, idx) => (
+                      <li key={ex} className="text-xs text-neutral-800 font-medium flex items-center gap-2">
+                        <span className="w-4 h-4 rounded-full border border-neutral-300 text-[10px] text-neutral-600 font-mono font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="truncate">{ex}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Notes box */}
+                <div className="mt-4 pt-3 border-t border-dashed border-neutral-300">
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
+                    Anotaciones / Cues:
+                  </p>
+                  <div className="h-10 border border-neutral-200 rounded-md border-dotted bg-white"></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Global Notes */}
+        <div className="mt-8 p-5 border border-neutral-200 rounded-lg bg-neutral-50">
+          <p className="text-xs uppercase tracking-widest font-bold text-neutral-500 mb-2">
+            Notas Globales de la Sesión:
+          </p>
+          <div className="space-y-3">
+            <div className="border-b border-neutral-300 h-6"></div>
+            <div className="border-b border-neutral-300 h-6"></div>
+            <div className="border-b border-neutral-300 h-6"></div>
+          </div>
+        </div>
+
+        <div className="text-center text-[10px] text-neutral-400 mt-8 border-t border-neutral-200 pt-4">
+          Plan estructurado en bloques de 10 min. Sistema de avisos de audio sincronizados: Gong Tibetano en transición de 30s.
+        </div>
       </div>
     </div>
   );
