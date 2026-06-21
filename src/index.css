@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Sophisticated Dark Color Tokens loaded seamlessly */
+  --color-luxury-charcoal: #E0DCD4; /* Warm-white/sand text coordinate */
+  --color-luxury-sand: #0F0F0F;    /* Sophisticated deep base dark */
+  --color-luxury-beige: #2A2A2A;   /* Minimal elegant deep gray border */
+  --color-luxury-gold: #A8B9A7;    /* Signature Sage Green Accent */
+  --color-luxury-gold-dark: #869885; /* Muted Sage Dark */
+  --color-luxury-gold-light: #C5D2C4; /* Elegant Safe Sage Light */
+}
+
+body {
+  background-color: #0F0F0F;
+  color: #E0DCD4;
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbars matching Sophisticated Dark */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A8B9A7;
+}
+
+/* Pulse keyframes for active status indicators */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.015); }
+}
+
+.pulse-active {
+  animation: soft-pulse 3s infinite ease-in-out;
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Pilates Class Designer & Player",
+  "description": "A premium web application to design 60-minute Pilates classes in blocks and play them using an offline-first player optimal for tablets, with audio gong notifications and strict timers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
