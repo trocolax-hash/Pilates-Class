@@ -11,7 +11,6 @@ import {
   Compass, 
   Flame, 
   Award,
-  Zap,
   Info
 } from "lucide-react";
 
@@ -24,7 +23,6 @@ interface PlayModeProps {
 export default function PlayMode({ className, selectedBlocks, onStopClass }: PlayModeProps) {
   // Playback timer states
   const [elapsed, setElapsed] = useState<number>(0); // 0 to 3600 seconds
-  const [simSpeed, setSimSpeed] = useState<number>(1); // Speed multiplier: 1x, 10x, 60x, 120x
   const [muted, setMuted] = useState<boolean>(false);
 
   // Keep track of audio notifications fired to prevent multiple triggers within the same second/frame
@@ -44,31 +42,12 @@ export default function PlayMode({ className, selectedBlocks, onStopClass }: Pla
         }
         return next;
       });
-    }, 1000 / simSpeed);
+    }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [simSpeed]);
-
-  // Adjust interval calculation on simulation speed swap
-  useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    if (elapsed < 3600) {
-      timerRef.current = setInterval(() => {
-        setElapsed((prev) => {
-          const next = prev + 1;
-          if (next >= 3600) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            return 3600;
-          }
-          return next;
-        });
-      }, 1000 / simSpeed);
-    }
-  }, [simSpeed, elapsed]);
+  }, []);
 
   // Handle playing custom synthesized sound effects based on absolute seconds elapsed
   useEffect(() => {
@@ -115,25 +94,6 @@ export default function PlayMode({ className, selectedBlocks, onStopClass }: Pla
     const minutes = Math.floor(secs / 60);
     const seconds = secs % 60;
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  // Skip block utility for trainer demo preview convenience
-  const handleSkipBlock = () => {
-    setElapsed((prev) => {
-      const currentBlockId = Math.floor(prev / 600) + 1;
-      const nextBlockStart = currentBlockId * 600;
-      if (nextBlockStart >= 3600) {
-        return 3590; // Skip to last 10 seconds of class to preview completion
-      }
-      return nextBlockStart;
-    });
-  };
-
-  // Jump to specific seconds (for simulation control)
-  const handleJumpToSecond = (seconds: number) => {
-    if (seconds >= 0 && seconds <= 3600) {
-      setElapsed(seconds);
-    }
   };
 
   // State calculations for current state
@@ -445,82 +405,6 @@ export default function PlayMode({ className, selectedBlocks, onStopClass }: Pla
               {formatTime(3600 - elapsed)}
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* 5. DEVELOPMENT / EVALUATION BOARD PANEL (Tucked neatly at bottom) */}
-      <div className="mt-8 bg-[#0F0F0F] border border-[#2A2A2A] p-4 rounded-2xl flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <Zap className="w-5 h-5 text-[#A8B9A7] animate-bounce" />
-          <div className="text-left">
-            <p className="text-xs font-bold text-white/90 font-sans">
-              Panel del Instructor (Test & Evaluación)
-            </p>
-            <p className="text-[11px] text-[#E0DCD4]/40 font-sans">
-              Acelera el tiempo para probar de inmediato la campana tibetana, los gongs y la transición de 30s.
-            </p>
-          </div>
-        </div>
-
-        {/* Control buttons & selection panel */}
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          {/* Quick jump menu */}
-          <div className="flex items-center gap-1.5 font-sans">
-            <span className="text-[10px] text-[#E0DCD4]/50">Saltar a:</span>
-            <button 
-              onClick={() => handleJumpToSecond(565)} 
-              className="text-[10px] bg-[#141414] border border-[#2A2A2A] hover:bg-[#2A2A2A] text-[#E0DCD4]/80 px-2 py-1 rounded-md cursor-pointer transition-colors"
-              title="Ir a 5 segundos antes de la primera transición de 30 segundos (Prueba del Gong)"
-            >
-              Gong 1 (9:25)
-            </button>
-            <button 
-              onClick={() => handleJumpToSecond(1165)} 
-              className="text-[10px] bg-[#141414] border border-[#2A2A2A] hover:bg-[#2A2A2A] text-[#E0DCD4]/80 px-2 py-1 rounded-md cursor-pointer transition-colors"
-              title="Ir a 5 segundos antes de la segunda transición (Prueba del Gong)"
-            >
-              Gong 2 (19:25)
-            </button>
-            <button 
-              onClick={() => handleJumpToSecond(3590)} 
-              className="text-[10px] bg-[#141414] border border-[#2A2A2A] hover:bg-[#2A2A2A] text-[#E0DCD4]/80 px-2 py-1 rounded-md cursor-pointer transition-colors"
-              title="Ir a los últimos 10 de clase para evaluar pantalla de éxito"
-            >
-              Finalizar (59:50)
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-[#2A2A2A] hidden sm:block"></div>
-
-          {/* Acceleration speed triggers */}
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-[#E0DCD4]/50 font-sans mr-1">Velocidad:</span>
-            {[1, 5, 20, 60, 120].map((v) => (
-              <button
-                key={v}
-                onClick={() => setSimSpeed(v)}
-                className={`text-[10px] px-2 py-1 rounded-md font-mono cursor-pointer transition-all ${
-                  simSpeed === v 
-                    ? "bg-[#A8B9A7] text-[#0F0F0F] font-bold" 
-                    : "bg-[#141414] border border-[#2A2A2A] text-white/70 hover:bg-[#2A2A2A]"
-                }`}
-                title={`Simular tiempo multiplicando por ${v}x`}
-              >
-                {v}x
-              </button>
-            ))}
-          </div>
-
-          <div className="h-6 w-px bg-[#2A2A2A] hidden sm:block"></div>
-
-          {/* Clear next segment action */}
-          <button
-            onClick={handleSkipBlock}
-            className="text-[10px] bg-[#A8B9A7]/10 border border-[#A8B9A7]/30 hover:bg-[#A8B9A7] hover:text-[#0F0F0F] text-[#A8B9A7] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all ml-auto lg:ml-0"
-          >
-            Saltar Bloque
-            <ChevronRight className="w-3 h-3" />
-          </button>
         </div>
       </div>
     </div>

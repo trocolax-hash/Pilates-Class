@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "PilatesClass": {
+      "title": "PilatesClass",
+      "description": "Represents a custom designed 60-minute Pilates class",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID of the Pilates class"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the class design"
+        },
+        "blocks": {
+          "type": "object",
+          "description": "Selected exercises mapping each block ID to lists of exercises"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time when the class was created"
+        }
+      },
+      "required": ["id", "name", "blocks", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/classes/{classId}": {
+      "schema": "PilatesClass",
+      "description": "Collection of custom pilates class designs saved by the instructor"
+    }
+  }
+}

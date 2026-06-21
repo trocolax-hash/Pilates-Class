@@ -9,10 +9,39 @@ import {
   HelpCircle, 
   Activity, 
   Sparkles,
-  Info
+  Info,
+  Database
 } from "lucide-react";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, orderBy, query } from "firebase/firestore";
 
-// Storage Key name
+// --- CONFIGURACIÓN DE FIREBASE ---
+// Copia y pega tus credenciales de Firestore de la consola de Firebase aquí para guardar tus clases en la nube:
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+// Comprobamos si las claves de Firebase están configuradas
+const isFirebaseConfigured = !!(firebaseConfig.projectId && firebaseConfig.apiKey);
+
+let app;
+let db: any = null;
+
+if (typeof window !== "undefined" && isFirebaseConfigured) {
+  try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    db = getFirestore(app);
+  } catch (err) {
+    console.error("No se pudo conectar con Firebase Firestore:", err);
+  }
+}
+
+// Storage Key name for LocalStorage fallback
 const LOCAL_STORAGE_KEY = "pilates-class-studio-saved";
 
 export default function App() {
@@ -25,8 +54,8 @@ export default function App() {
     blocks: { [blockId: number]: string[] };
   } | null>(null);
 
-  // Initialize and load saved classes from local storage
-  useEffect(() => {
+  // Fallback function to load presets or items from LocalStorage
+  const loadFromLocalStorage = () => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
@@ -65,12 +94,48 @@ export default function App() {
         setSavedClasses(defaultDemos);
       }
     } catch (e) {
-      console.error("Failed to parse stored sessions:", e);
+      console.error("Local storage fallback loading failed:", e);
     }
-  }, []);
+  };
 
-  // Save class callback
-  const handleSaveClass = (newClass: PilatesClass) => {
+  // Initialize and load saved classes from Firestore or standard LocalStorage fallback
+  useEffect(() => {
+    if (db) {
+      const loadFromFirestore = async () => {
+        try {
+          const q = query(collection(db, "classes"), orderBy("createdAt", "desc"));
+          const snapshot = await getDocs(q);
+          const classes: PilatesClass[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            classes.push({
+              id: docSnap.id,
+              name: data.name,
+              blocks: data.blocks,
+              createdAt: data.createdAt
+            });
+          });
+          
+          if (classes.length > 0) {
+            setSavedClasses(classes);
+          } else {
+            // If Cloud DB is completely empty, populate with local default templates to provide instant beautiful onboarding
+            loadFromLocalStorage();
+          }
+        } catch (err) {
+          console.error("Error reading from Firestore:", err);
+          loadFromLocalStorage();
+        }
+      };
+      loadFromFirestore();
+    } else {
+      loadFromLocalStorage();
+    }
+  }, [db]);
+
+  // Save class callback (sync to State, LocalStorage and Firestore cloud asynchronously if connected)
+  const handleSaveClass = async (newClass: PilatesClass) => {
+    // 1. Sync to local state and local storage immediately
     setSavedClasses((prev) => {
       // If it exists, replace it, otherwise append
       const exists = prev.some((c) => c.id === newClass.id);
@@ -83,15 +148,40 @@ export default function App() {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
+
+    // 2. Clear async write to firestore
+    if (db) {
+      try {
+        await setDoc(doc(db, "classes", newClass.id), {
+          name: newClass.name,
+          blocks: newClass.blocks,
+          createdAt: newClass.createdAt
+        });
+        console.log(`Clase "${newClass.name}" guardada con éxito en Google Cloud Firestore.`);
+      } catch (err) {
+        console.error("Fallo al guardar en Firestore:", err);
+      }
+    }
   };
 
-  // Delete class callback
-  const handleDeleteClass = (classId: string) => {
+  // Delete class callback (sync deletions to State, LocalStorage and Firestore cloud asynchronously if connected)
+  const handleDeleteClass = async (classId: string) => {
+    // 1. Delete from local state and LocalStorage immediately
     setSavedClasses((prev) => {
       const updated = prev.filter((c) => c.id !== classId);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
+
+    // 2. Delete from Cloud
+    if (db) {
+      try {
+        await deleteDoc(doc(db, "classes", classId));
+        console.log(`Clase con ID ${classId} eliminada con éxito de Google Cloud Firestore.`);
+      } catch (err) {
+        console.error("Fallo al eliminar de Firestore:", err);
+      }
+    }
   };
 
   // Triggering the active playback mode
@@ -140,21 +230,38 @@ export default function App() {
           </div>
 
           {/* Quick status bar */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#E0DCD4]/60">
-              Estado:
-            </span>
-            {mode === "setup" ? (
-              <span className="text-xs bg-[#A8B9A7]/10 border border-[#A8B9A7]/20 text-[#A8B9A7] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                Modo Edición (Setup)
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Database Sync Indicator */}
+            {isFirebaseConfigured ? (
+              <span className="text-[11px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-3 py-1 rounded-full flex items-center gap-1.5" title="Sincronizado en tiempo real con Google Cloud Firestore">
+                <Database className="w-3.5 h-3.5 text-emerald-400" />
+                Nube Activa (Firestore)
               </span>
             ) : (
-              <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-3 py-1 rounded-full flex items-center gap-1.5 pulse-active">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
-                Reproductor Activo (Play)
+              <span className="text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold px-3 py-1 rounded-full flex items-center gap-1.5" title="Guardando de forma local en tu navegador. Completa las credenciales del objeto 'firebaseConfig' en App.tsx para activar la base de datos de Google Cloud en producción.">
+                <Database className="w-3.5 h-3.5 text-amber-500" />
+                Almacenamiento Local (Modo Sandbox)
               </span>
             )}
+
+            <div className="h-4 w-px bg-[#2A2A2A] hidden sm:block"></div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#E0DCD4]/60">
+                Estado:
+              </span>
+              {mode === "setup" ? (
+                <span className="text-xs bg-[#A8B9A7]/10 border border-[#A8B9A7]/20 text-[#A8B9A7] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Modo Edición (Setup)
+                </span>
+              ) : (
+                <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold px-3 py-1 rounded-full flex items-center gap-1.5 pulse-active">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                  Reproductor Activo (Play)
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
